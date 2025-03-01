@@ -25,17 +25,20 @@ class CategoryRepository extends GetxController {
   }
 
   // Xóa danh mục theo ID
-  Future<void> deleteCategory(BuildContext context, String id) async {
+  Future<void> deleteCategory(String categoryId) async {
     try {
-      await _db.collection("categories").doc(id).delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Danh mục đã được xóa"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } catch (error) {
-      _handleError(context, error);
+      final productsSnapshot = await _db
+          .collection('products')
+          .where('categoryId', isEqualTo: categoryId)
+          .get();
+
+      for (var doc in productsSnapshot.docs) {
+        await _db.collection('products').doc(doc.id).delete();
+      }
+
+      await _db.collection('categories').doc(categoryId).delete();
+    } catch (e) {
+      throw Exception("Lỗi khi xóa danh mục: $e");
     }
   }
 

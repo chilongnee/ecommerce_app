@@ -54,7 +54,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       });
     }
   }
-
+  
   void _deleteProduct(ProductModel product) async {
     bool? confirmDelete = await showDialog(
       context: context,

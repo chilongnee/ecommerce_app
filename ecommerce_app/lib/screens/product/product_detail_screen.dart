@@ -121,21 +121,33 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             const SizedBox(height: 20),
             if (widget.product.parentId == null)
               Center(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final newVariant = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            AddVariantScreen(parentProduct: widget.product),
-                      ),
-                    );
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final newVariant = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              AddVariantScreen(parentProduct: widget.product),
+                        ),
+                      );
 
-                    if (newVariant != null) {
-                      _loadVariants();
-                    }
-                  },
-                  child: const Text("Thêm biến thể"),
+                      if (newVariant != null) {
+                        _loadVariants();
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7AE582),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text(
+                      "Thêm biến thể",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
                 ),
               ),
           ],

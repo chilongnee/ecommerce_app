@@ -41,15 +41,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
     });
   }
 
-Future<void> _pickImages() async {
-  final List<XFile>? pickedFiles = await ImagePicker().pickMultiImage();
-  if (pickedFiles != null && pickedFiles.isNotEmpty) {
-    List<File> newImages = pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
-    setState(() {
-      _selectedImages.addAll(newImages);
-    });
+  Future<void> _pickImages() async {
+    final List<XFile>? pickedFiles = await ImagePicker().pickMultiImage();
+    if (pickedFiles != null && pickedFiles.isNotEmpty) {
+      List<File> newImages =
+          pickedFiles.map((pickedFile) => File(pickedFile.path)).toList();
+      setState(() {
+        _selectedImages.addAll(newImages);
+      });
+    }
   }
-}
 
   Future<File> _saveImageLocally(File image) async {
     final directory = await getApplicationDocumentsDirectory();

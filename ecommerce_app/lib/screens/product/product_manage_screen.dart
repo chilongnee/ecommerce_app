@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:ecommerce_app/repository/product_repository.dart';
 import 'package:ecommerce_app/screens/product/add_product_screen.dart';
+import 'package:ecommerce_app/screens/product/edit_product_screen.dart';
 import 'package:ecommerce_app/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:ecommerce_app/models/product_model.dart';
@@ -51,6 +52,43 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
               product.productName.toLowerCase().contains(query.toLowerCase()))
           .toList();
     });
+  }
+
+  void _deleteProduct(ProductModel product) async {
+    bool? confirmDelete = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Xác nhận xóa"),
+        content: Text("Bạn có chắc muốn xóa '${product.productName}' không?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Hủy"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context, true);
+              await _productRepo.deleteProduct(product.id!);
+              setState(() {
+                _filteredProducts.removeWhere((p) => p.id == product.id);
+                _allProducts.removeWhere((p) => p.id == product.id);
+              });
+            },
+            child: const Text("Xóa", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editProduct(ProductModel product) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProductScreen(product: product),
+      ),
+    );
+    _loadProducts();
   }
 
   @override
@@ -162,14 +200,14 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     );
   }
 
-  // Grid View
+// Grid View
   Widget _buildGridView() {
     return GridView.builder(
       padding: const EdgeInsets.all(5),
       itemCount: _filteredProducts.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.8,
+        childAspectRatio: 0.6,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
@@ -186,33 +224,60 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
           },
           child: Card(
             color: Colors.white,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             elevation: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AspectRatio(
-                  aspectRatio: 1.2,
-                  child: ClipRRect(
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(10)),
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(10)),
+                  child: AspectRatio(
+                    aspectRatio: 1,
                     child: _buildImage(
-                        product.images.isNotEmpty ? product.images[0] : null),
+                      product.images.isNotEmpty ? product.images[0] : null,
+                    ),
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(product.productName,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        product.productName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
                       const SizedBox(height: 5),
-                      Text(formatCurrency(product.price),
-                          style:
-                              const TextStyle(fontSize: 14, color: Colors.red)),
+                      Text(
+                        formatCurrency(product.price),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.red,
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => _editProduct(product),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteProduct(product),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -224,7 +289,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
     );
   }
 
-  // List View
+// List View
   Widget _buildListView() {
     return ListView.builder(
       padding: const EdgeInsets.all(5),
@@ -247,16 +312,52 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
             elevation: 2,
             margin: const EdgeInsets.only(bottom: 10),
             child: ListTile(
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(5),
-                child: _buildImage(
-                    product.images.isNotEmpty ? product.images[0] : null),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+              leading: SizedBox(
+                width: 50,
+                height: 50,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: _buildImage(
+                      product.images.isNotEmpty ? product.images[0] : null),
+                ),
               ),
-              title: Text(product.productName,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text(formatCurrency(product.price),
-                  style: const TextStyle(fontSize: 14, color: Colors.red)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+              title: Text(
+                product.productName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                formatCurrency(product.price),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.red,
+                ),
+              ),
+              trailing: SizedBox(
+                width: 100,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _editProduct(product),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _deleteProduct(product),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );

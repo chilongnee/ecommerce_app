@@ -51,6 +51,58 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
     });
   }
 
+  void _editCategory(CategoryModel category) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCategoryScreen(category: category),
+      ),
+    );
+    _loadCategories();
+  }
+
+  void _confirmDeleteCategory(CategoryModel category) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Xác nhận xóa"),
+        content: Text(
+            "Bạn có chắc chắn muốn xóa danh mục '${category.name}' không? Điều này sẽ xóa tất cả sản phẩm thuộc danh mục này."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Hủy"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteCategory(category.id!);
+            },
+            child: const Text("Xóa", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteCategory(String categoryId) async {
+    try {
+      await _categoryRepo.deleteCategory(categoryId);
+      setState(() {
+        _allCategories.removeWhere((category) => category.id == categoryId);
+        _filteredCategories
+            .removeWhere((category) => category.id == categoryId);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Đã xóa danh mục thành công")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi khi xóa danh mục: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -167,7 +219,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
       itemCount: _filteredCategories.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 1.1,
+        childAspectRatio: 0.92,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
       ),
@@ -200,6 +252,20 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                   category.name,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      onPressed: () => _editCategory(category),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _confirmDeleteCategory(category),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -243,7 +309,19 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
             ),
             title: Text(category.name,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => _editCategory(category),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _confirmDeleteCategory(category),
+                ),
+              ],
+            ),
             onTap: () {
               Navigator.push(
                 context,
