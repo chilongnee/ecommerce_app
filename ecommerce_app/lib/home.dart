@@ -1,6 +1,7 @@
-import 'package:ecommerce_app/services/firebase_auth_service.dart';
+import 'package:ecommerce_app/screens/user/user_profile_screen.dart';
 import 'package:flutter/material.dart';
-
+import 'package:ecommerce_app/services/firebase_auth_service.dart';
+import 'package:ecommerce_app/screens/widgets/bottom_nav_button.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -18,10 +19,27 @@ class _HomeState extends State<Home> {
     super.initState();
     print(_auth.currentUser?.email);
     screens = [
-      const Center(child: Text('Home Screen')),
-      const Center(child: Text('Profile Screen')),
-      const Center(child: Text('Settings Screen')),
+      const UserProfileScreen(),
     ];
+  }
+
+  void changeTab(int index) {
+    setState(() {
+      currentTab = index;
+      currentScreen = screens[index];
+    });
+  }
+
+  Widget buildBottomNavigationButton(
+      int tabIndex, String iconPath, String label) {
+    return BottomNavigationButton(
+      // bottom_nav_button.dart
+      tabIndex: tabIndex,
+      iconPath: iconPath,
+      label: label,
+      isSelected: currentTab == tabIndex,
+      onPressed: changeTab,
+    );
   }
 
   late Widget currentScreen;
@@ -54,15 +72,7 @@ class _HomeState extends State<Home> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // buildBottomNavigationButton(0, 'home', 'Home'),
-                  // buildBottomNavigationButton(1, 'people', 'Community'),
-                ],
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // buildBottomNavigationButton(2, 'folder', 'Folder'),
-                  // buildBottomNavigationButton(3, 'profile', 'Profile'),
+                  buildBottomNavigationButton(0, 'profile', 'Profile'),
                 ],
               ),
             ],
@@ -71,6 +81,4 @@ class _HomeState extends State<Home> {
       ),
     );
   }
-
-
 }

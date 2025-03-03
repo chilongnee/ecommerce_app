@@ -21,12 +21,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _stockController = TextEditingController();
+  TextEditingController _discountController = TextEditingController();
   final ProductRepository _productRepo = ProductRepository();
   final CategoryRepository _categoryRepo = CategoryRepository();
 
   String? _selectedCategory;
   List<CategoryModel> _categories = [];
   List<File> _selectedImages = [];
+  bool _showDiscountInput = false;
 
   @override
   void initState() {
@@ -80,6 +82,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
         return;
       }
 
+    double discount = double.tryParse(_discountController.text.trim()) ?? 0;
+    if (discount > 50) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Giảm giá không thể vượt quá 50%"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
       final product = ProductModel(
         productName: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -87,6 +102,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         brand: _brandController.text.trim(),
         categoryId: _selectedCategory!,
         stock: int.parse(_stockController.text.trim()),
+        discount: discount,
         images: _selectedImages.map((file) => file.path).toList(),
       );
 
@@ -127,6 +143,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ]),
               _buildCard("Danh mục", [
                 _buildCategoryDropdown(),
+              ]),
+              _buildCard("Giảm giá", [
+                if (!_showDiscountInput)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showDiscountInput = true;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7AE582),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text("Áp dụng giảm giá",
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                if (_showDiscountInput)
+                  _buildLabeledTextField("Giảm giá (%)", _discountController,
+                      keyboardType: TextInputType.number, isDiscount: true),
               ]),
               _buildCard("Hình ảnh", [
                 _buildImagePicker(),
@@ -189,7 +226,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
       {int minLines = 1,
       int? maxLines = 1,
       TextInputType keyboardType = TextInputType.text,
-      bool isPrice = false}) {
+      bool isPrice = false,
+      bool isDiscount = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -212,23 +250,42 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: InputBorder.none,
             ),
-            onChanged: isPrice
-                ? (value) {
-                    String cleanValue = value.replaceAll(RegExp(r'[^\d]'), '');
-                    if (cleanValue.isNotEmpty) {
-                      final formatter = NumberFormat("#,###", "vi_VN");
-                      String formattedValue =
-                          formatter.format(int.parse(cleanValue));
-                      controller.value = TextEditingValue(
-                        text: "$formattedValue VNĐ",
-                        selection: TextSelection.collapsed(
-                            offset: formattedValue.length + 4),
-                      );
-                    }
-                  }
-                : null,
-            validator: (value) =>
-                value == null || value.isEmpty ? "Vui lòng nhập $label" : null,
+            onChanged: (value) {
+              if (isDiscount) {
+                int discount = int.tryParse(value) ?? 0;
+                if (discount > 50) {
+                  controller.text = "50"; // Giới hạn tối đa 50%
+                  controller.selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.text.length),
+                  );
+                }
+              }
+              if (isPrice) {
+                String cleanValue = value.replaceAll(RegExp(r'[^\d]'), '');
+                if (cleanValue.isNotEmpty) {
+                  final formatter = NumberFormat("#,###", "vi_VN");
+                  String formattedValue =
+                      formatter.format(int.parse(cleanValue));
+                  controller.value = TextEditingValue(
+                    text: "$formattedValue VNĐ",
+                    selection: TextSelection.collapsed(
+                        offset: formattedValue.length + 4),
+                  );
+                }
+              }
+            },
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return "Vui lòng nhập $label";
+              }
+              if (isDiscount) {
+                int discount = int.tryParse(value) ?? 0;
+                if (discount > 50) {
+                  return "Giảm giá không thể vượt quá 50%";
+                }
+              }
+              return null;
+            },
           ),
         ),
         const SizedBox(height: 10),

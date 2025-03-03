@@ -1,6 +1,8 @@
 import 'package:ecommerce_app/firebase_options.dart';
+import 'package:ecommerce_app/home.dart';
 import 'package:ecommerce_app/screens/admin/admin_home_screen.dart';
 import 'package:ecommerce_app/screens/auth/login_screen.dart';
+import 'package:ecommerce_app/screens/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -21,7 +23,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: AdminHomeScreen(),
+      home: SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

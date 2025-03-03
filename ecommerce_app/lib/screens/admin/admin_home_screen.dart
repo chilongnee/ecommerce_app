@@ -1,6 +1,8 @@
+import 'package:ecommerce_app/screens/auth/login_screen.dart';
 import 'package:ecommerce_app/screens/category/category_manage_screen.dart';
 import 'package:ecommerce_app/screens/product/product_manage_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -79,16 +81,20 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               },
               children: [
                 _buildSubItem("Danh mục", Icons.list, () {
-                    Navigator.of(context).push(_createRoute(const CategoryManagementScreen()));
+                  Navigator.of(context)
+                      .push(_createRoute(const CategoryManagementScreen()));
                 }),
                 _buildSubItem("Sản phẩm", Icons.shopping_bag, () {
-                  Navigator.of(context).push(_createRoute(const ProductManagementScreen()));
+                  Navigator.of(context)
+                      .push(_createRoute(const ProductManagementScreen()));
                 }),
               ],
             ),
             _buildDrawerItem(Icons.receipt_long, "Quản lý đơn hàng", () {
               // quản lý đơn hàng
             }),
+            const Spacer(),
+            _buildLogoutItem(),
           ],
         ),
       ),
@@ -97,8 +103,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   Widget _buildDrawerItem(IconData icon, String label, VoidCallback onTap) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 18, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       child: ListTile(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -121,8 +126,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     required List<Widget> children,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 18, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       child: Column(
         children: [
           ListTile(
@@ -162,15 +166,38 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
+  Widget _buildLogoutItem() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      child: ListTile(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        leading: const Icon(Icons.logout, color: Colors.red),
+        title: const Text("Đăng xuất", style: const TextStyle(fontSize: 16)),
+        onTap: () async {
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.clear();
+          if (!mounted) return;
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => Login()),
+            (route) => false, // Xóa toàn bộ stack navigation
+          );
+        },
+      ),
+    );
+  }
+
   Route _createRoute(Widget page) {
-  return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      return FadeTransition(
-        opacity: animation,
-        child: child,
-      );
-    },
-  );
-}
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+    );
+  }
 }

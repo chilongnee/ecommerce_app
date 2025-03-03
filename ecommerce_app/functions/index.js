@@ -23,6 +23,13 @@ exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
 
+    try {
+      await admin.auth().getUserByEmail(email);
+    } catch (error) {
+      console.error("Lỗi: Email chưa được đăng ký trong Firebase Auth.");
+      return res.status(400).json({ success: false, message: "Email này chưa được đăng ký!" });
+    }
+
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log("OTP tạo ra:", otp);
 

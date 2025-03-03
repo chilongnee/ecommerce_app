@@ -1,3 +1,4 @@
+import 'package:ecommerce_app/screens/admin/admin_home_screen.dart';
 import 'package:flutter/material.dart';
 // SCREEN
 import 'package:ecommerce_app/home.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_social_button/flutter_social_button.dart';
 // FIREBASE
 import 'package:ecommerce_app/services/firebase_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -32,26 +34,57 @@ class _LoginState extends State<Login> {
     setState(() {
       _isSigning = true;
     });
+
     _formKey.currentState!.validate();
-    String email = _emailController.text;
-    String password = _passwordController.text;
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email == "admin@gmail.com" && password == "admin123") {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('role', 'admin');
+
+      setState(() {
+        _isSigning = false;
+      });
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminHomeScreen()),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đăng nhập Admin thành công!'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     User? user = await _auth.signInWithEmailAndPassword(
-        email: email, password: password);
+      email: email,
+      password: password,
+    );
 
     setState(() {
       _isSigning = false;
     });
 
     if (user != null) {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('role', 'user');
+
       print("Sign in successfully!!");
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Home()),
       );
-      // Show snackbar using provided context
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Đăng nhập thành công'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -60,8 +93,9 @@ class _LoginState extends State<Login> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Thông tin không chính xác! Vui lòng kiểm tra lại"),
-          duration: Duration(seconds: 2),
+          content:
+              const Text("Thông tin không chính xác! Vui lòng kiểm tra lại"),
+          duration: const Duration(seconds: 2),
           action: SnackBarAction(
             label: 'Đóng',
             onPressed: () {
@@ -70,7 +104,7 @@ class _LoginState extends State<Login> {
           ),
         ),
       );
-      print("Some error happend");
+      print("Some error happened");
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // SCREEN
 import 'package:ecommerce_app/screens/auth/verifiy_otp_screen.dart';
@@ -20,55 +21,54 @@ class _LoginState extends State<ForgotPassword> {
   bool _isSigning = false;
   final FocusNode _focusNode = FocusNode();
 
+  Future<void> _forgotPassword() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isSigning = true);
 
-Future<void> _forgotPassword() async {
-  if (_formKey.currentState!.validate()) {
-    setState(() => _isSigning = true);
+      try {
+        String email = _emailController.text.trim();
 
-    try {
-      String email = _emailController.text.trim();
+        final response = await http.post(
+          Uri.parse(
+              "http://127.0.0.1:5002/ecommerce-app-flutter-45845/us-central1/sendOtpEmail"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"email": email}),
+        );
 
-      final response = await http.post(
-        Uri.parse("http://127.0.0.1:5002/ecommerce-app-flutter-45845/us-central1/sendOtpEmail"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email}),
-      );
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
 
-      print("Response status: ${response.statusCode}");
-      print("Response body: ${response.body}");
+        final responseData = jsonDecode(response.body);
 
-      final responseData = jsonDecode(response.body);
+        if (response.statusCode == 200 && responseData['success'] == true) {
+          String otp = responseData['otp'];
 
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        String otp = responseData['otp'];
+          // Lưu OTP
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('otp', otp);
+          await prefs.setInt('otp_time', DateTime.now().millisecondsSinceEpoch);
 
-        // Lưu OTP
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('otp', otp);
-        await prefs.setInt('otp_time', DateTime.now().millisecondsSinceEpoch);
+          setState(() => _isSigning = false);
 
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('OTP đã được gửi tới email của bạn!')),
+          );
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => VerifyOTP(email: email)),
+          );
+        } else {
+          throw Exception('Gửi OTP thất bại');
+        }
+      } catch (e) {
         setState(() => _isSigning = false);
-
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('OTP đã được gửi tới email của bạn!')),
+          SnackBar(content: Text('Đã có lỗi xảy ra, vui lòng thử lại!')),
         );
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => VerifyOTP(email: email)),
-        );
-      } else {
-        throw Exception('Gửi OTP thất bại');
       }
-    } catch (e) {
-      setState(() => _isSigning = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đã có lỗi xảy ra, vui lòng thử lại!')),
-      );
     }
   }
-}
-
 
   @override
   void initState() {
