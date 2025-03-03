@@ -21,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
     bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
     String? role = prefs.getString('role');
 
-    await Future.delayed(Duration(seconds: 2)); // Giả lập màn hình chờ
+    await Future.delayed(Duration(seconds: 2));
 
     if (isLoggedIn) {
       if (role == 'admin') {

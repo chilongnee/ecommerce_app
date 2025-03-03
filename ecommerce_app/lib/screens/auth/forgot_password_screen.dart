@@ -168,7 +168,7 @@ class _LoginState extends State<ForgotPassword> {
                                   'GỬI YÊU CẦU',
                                   style: TextStyle(
                                       fontSize:
-                                          18), // Không cần set màu thủ công
+                                          18),
                                 ),
                         ),
                       ),
