@@ -23,6 +23,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   final _fullNameController = TextEditingController();
   final _addressController = TextEditingController();
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmNewPasswordController = TextEditingController();
+
+  bool _isOldPasswordObscure = true;
+  bool _isNewPasswordObscure = true;
+  bool _isConfirmPasswordObscure = true;
+
+  bool _isChangingPassword = false;
   String? _email;
   String? _linkImage;
   bool _isEditing = false;
@@ -36,22 +45,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   void _fetchUserData() async {
-    if (user != null) {
-      DocumentSnapshot<Map<String, dynamic>> userData = await FirebaseFirestore
-          .instance
-          .collection('users')
-          .doc(user!.uid)
-          .get();
+    if (user == null) return;
 
-      if (userData.exists) {
-        UserModel userModel = UserModel.fromJson(userData.data()!, user!.uid);
+    try {
+      UserModel? userModel = await _userRepo.getUserDetails(user!.uid);
+      if (userModel != null) {
         setState(() {
           _email = userModel.email;
           _fullNameController.text = userModel.fullName;
           _addressController.text = userModel.address;
           _linkImage = userModel.linkImage ?? "";
         });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Không tìm thấy dữ liệu người dùng")),
+        );
       }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi tải dữ liệu: $e")),
+      );
     }
   }
 
@@ -77,8 +90,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           email: _email!,
           fullName: _fullNameController.text.trim(),
           address: _addressController.text.trim(),
-          linkImage:
-              _linkImage,
+          linkImage: _linkImage,
         );
 
         await _userRepo.updateUser(user!.uid, updatedUser);
@@ -91,10 +103,64 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         SnackBar(content: Text('Lỗi cập nhật: $e')),
       );
     }
+  }
+
+  void _changePassword() async {
+    setState(() {
+      _isChangingPassword = true;
+    });
+
+    String oldPassword = _oldPasswordController.text.trim();
+    String newPassword = _newPasswordController.text.trim();
+    String confirmPassword = _confirmNewPasswordController.text.trim();
+
+    if (oldPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng nhập đầy đủ thông tin")),
+      );
+      setState(() => _isChangingPassword = false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mật khẩu mới phải có ít nhất 6 ký tự")),
+      );
+      setState(() => _isChangingPassword = false);
+      return;
+    }
+
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mật khẩu mới không khớp")),
+      );
+      setState(() => _isChangingPassword = false);
+      return;
+    }
+
+    try {
+      String? error = await _userRepo.updatePassword(newPassword);
+
+      if (error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Đổi mật khẩu thành công!")),
+        );
+        _oldPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmNewPasswordController.clear();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi: ${e.toString()}")),
+      );
+    }
 
     setState(() {
-      _isLoading = false;
-      _isEditing = false;
+      _isChangingPassword = false;
     });
   }
 
@@ -133,8 +199,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Email",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
         const SizedBox(height: 5),
         TextFormField(
           controller: TextEditingController(text: _email),
@@ -147,6 +211,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: const BorderSide(color: Colors.grey),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildPasswordField(String label, TextEditingController controller,
+      bool isObscure, VoidCallback toggleObscure) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 5),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 5)],
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: isObscure,
+            decoration: InputDecoration(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: InputBorder.none,
+              suffixIcon: IconButton(
+                icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility),
+                onPressed: toggleObscure,
+              ),
             ),
           ),
         ),
@@ -189,6 +286,38 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
+  Widget _buildCard(String title, List<Widget> children) {
+    return Card(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 15),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 5,
+                  height: 20,
+                  color: const Color(0xFF7AE582),
+                  margin: const EdgeInsets.only(right: 10),
+                ),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,9 +346,48 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            _buildEmailField(),
-            _buildLabeledTextField("Họ và tên", _fullNameController),
-            _buildLabeledTextField("Địa chỉ", _addressController),
+            _buildCard("Email", [_buildEmailField()]),
+            _buildCard("Thông tin cá nhân", [
+              _buildLabeledTextField("Họ và tên", _fullNameController),
+              _buildLabeledTextField("Địa chỉ", _addressController)
+            ]),
+            _buildCard("Mật khẩu", [
+              _buildPasswordField(
+                  "Mật khẩu cũ", _oldPasswordController, _isOldPasswordObscure,
+                  () {
+                setState(() {
+                  _isOldPasswordObscure = !_isOldPasswordObscure;
+                });
+              }),
+              _buildPasswordField(
+                  "Mật khẩu mới", _newPasswordController, _isNewPasswordObscure,
+                  () {
+                setState(() {
+                  _isNewPasswordObscure = !_isNewPasswordObscure;
+                });
+              }),
+              _buildPasswordField("Nhập lại mật khẩu mới",
+                  _confirmNewPasswordController, _isConfirmPasswordObscure, () {
+                setState(() {
+                  _isConfirmPasswordObscure = !_isConfirmPasswordObscure;
+                });
+              }),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _isChangingPassword ? null : _changePassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                ),
+                child: _isChangingPassword
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Đổi mật khẩu",
+                        style: TextStyle(fontSize: 16, color: Colors.white)),
+              ),
+            ]),
             const SizedBox(height: 24),
             _isEditing
                 ? Column(

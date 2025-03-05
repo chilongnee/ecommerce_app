@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:ecommerce_app/screens/product/edit_product_screen.dart';
 import 'package:ecommerce_app/screens/product/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:ecommerce_app/models/product_model.dart';
 import 'package:ecommerce_app/repository/product_repository.dart';
+import 'package:intl/intl.dart';
 
 class ProductListScreen extends StatefulWidget {
   final String categoryId;
@@ -54,7 +57,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
       });
     }
   }
-  
+
   void _deleteProduct(ProductModel product) async {
     bool? confirmDelete = await showDialog(
       context: context,
@@ -118,14 +121,32 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ],
                   ),
                   child: ListTile(
-                    leading: product.images.isNotEmpty &&
-                            product.images.first.isNotEmpty
-                        ? Image.network(product.images.first,
-                            width: 50, height: 50, fit: BoxFit.cover)
-                        : const Icon(Icons.laptop,
-                            size: 50, color: Colors.grey),
-                    title: Text(product.productName),
-                    subtitle: Text("Giá: ${product.price} đ"),
+                    leading: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(5),
+                        child: _buildImage(product.images.isNotEmpty
+                            ? product.images[0]
+                            : null),
+                      ),
+                    ),
+                    title: Text(
+                      product.productName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      formatCurrency(product.price),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.red,
+                      ),
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -140,5 +161,24 @@ class _ProductListScreenState extends State<ProductListScreen> {
               },
             ),
     );
+  }
+
+  Widget _buildImage(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty) {
+      return const Icon(Icons.image_not_supported,
+          size: 80, color: Colors.grey);
+    }
+
+    if (imagePath.startsWith('/')) {
+      return Image.file(File(imagePath),
+          width: 80, height: 80, fit: BoxFit.cover);
+    } else {
+      return Image.network(imagePath, width: 80, height: 80, fit: BoxFit.cover);
+    }
+  }
+
+  String formatCurrency(double price) {
+    final formatter = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    return formatter.format(price);
   }
 }

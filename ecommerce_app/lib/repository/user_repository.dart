@@ -1,4 +1,5 @@
 import 'package:ecommerce_app/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
@@ -6,6 +7,8 @@ import 'package:get/get.dart';
 class UserRepository extends GetxController {
   static UserRepository get instance => Get.find();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
 
   Future<void> createUser(BuildContext context, UserModel user) async {
     try {
@@ -68,7 +71,26 @@ class UserRepository extends GetxController {
     }
   }
 
-  Future<void> updateUser(String userId, UserModel user) async {
-    await _db.doc(userId).update(user.toJson());
+  Future<String?> updateUser(String userId, UserModel user) async {
+    try {
+      await _db.collection('users').doc(userId).update(user.toJson());
+      return null;
+    } catch (e) {
+      return "Lỗi cập nhật thông tin: ${e.toString()}";
+    }
+  }
+
+  Future<String?> updatePassword(String newPassword) async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        await user.updatePassword(newPassword);
+        return null;
+      } else {
+        return "Người dùng chưa đăng nhập.";
+      }
+    } catch (e) {
+      return "Lỗi đổi mật khẩu: ${e.toString()}";
+    }
   }
 }
