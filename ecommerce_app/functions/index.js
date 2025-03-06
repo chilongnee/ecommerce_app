@@ -20,13 +20,13 @@ exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
     const { email } = req.body;
     if (!email) {
       console.error("Lỗi: Không có email trong request.");
-      return res.status(400).json({ success: false, message: "Email is required" });
+      return res.status(400).json({ success: false, message: "Vui lòng nhập email." });
     }
 
     try {
       await admin.auth().getUserByEmail(email);
     } catch (error) {
-      console.error("Lỗi: Email chưa được đăng ký trong Firebase Auth.");
+      console.error("Email không tồn tại:", error.message);
       return res.status(400).json({ success: false, message: "Email này chưa được đăng ký!" });
     }
 
@@ -34,19 +34,32 @@ exports.sendOtpEmail = functions.https.onRequest(async (req, res) => {
     console.log("OTP tạo ra:", otp);
 
     const mailOptions = {
-      from: "nguyenhoanganh.52200067@gmail.com",
+      from: process.env.EMAIL_USER,
       to: email,
       subject: "Ecommerce App OTP Verification",
       text: `Mã OTP của bạn là: ${otp}. Mã này sẽ hết hạn sau 1 phút.`,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email đã gửi thành công:", info.response);
-
-    return res.status(200).json({ success: true, otp });
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log("Email đã gửi thành công:", info.response);
+      return res.status(200).json({ success: true, otp });
+    } catch (emailError) {
+      console.error("Lỗi khi gửi email:", emailError.message);
+      return res.status(500).json({
+        success: false,
+        message: "Không thể gửi OTP. Vui lòng thử lại sau.",
+        error: emailError.message,
+      });
+    }
   } catch (error) {
-    console.error("Lỗi khi gửi email:", error);
-    return res.status(500).json({ success: false, message: "Không thể gửi OTP", error: error.toString() });
+    console.error("Lỗi không xác định:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.",
+      error: error.toString(),
+    });
   }
 });
+
     

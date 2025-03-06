@@ -30,7 +30,7 @@ class _LoginState extends State<ForgotPassword> {
 
         final response = await http.post(
           Uri.parse(
-              "http://127.0.0.1:5002/ecommerce-app-flutter-45845/us-central1/sendOtpEmail"),
+              "http://127.0.0.1:5001/ecommerce-app-e7dea/us-central1/sendOtpEmail"),
           headers: {"Content-Type": "application/json"},
           body: jsonEncode({"email": email}),
         );
@@ -40,15 +40,14 @@ class _LoginState extends State<ForgotPassword> {
 
         final responseData = jsonDecode(response.body);
 
+        setState(() => _isSigning = false);
+
         if (response.statusCode == 200 && responseData['success'] == true) {
           String otp = responseData['otp'];
 
-          // Lưu OTP
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('otp', otp);
           await prefs.setInt('otp_time', DateTime.now().millisecondsSinceEpoch);
-
-          setState(() => _isSigning = false);
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('OTP đã được gửi tới email của bạn!')),
@@ -59,15 +58,20 @@ class _LoginState extends State<ForgotPassword> {
             MaterialPageRoute(builder: (context) => VerifyOTP(email: email)),
           );
         } else {
-          throw Exception('Gửi OTP thất bại');
+          String errorMessage = responseData['message'] ?? 'Gửi OTP thất bại';
+          _showErrorMessage(errorMessage);
         }
       } catch (e) {
         setState(() => _isSigning = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Đã có lỗi xảy ra, vui lòng thử lại!')),
-        );
+        _showErrorMessage('Lỗi: ${e.toString()}');
       }
     }
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -166,9 +170,7 @@ class _LoginState extends State<ForgotPassword> {
                                   color: Colors.white)
                               : const Text(
                                   'GỬI YÊU CẦU',
-                                  style: TextStyle(
-                                      fontSize:
-                                          18),
+                                  style: TextStyle(fontSize: 18),
                                 ),
                         ),
                       ),

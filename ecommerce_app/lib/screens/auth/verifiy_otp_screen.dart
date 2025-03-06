@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:ecommerce_app/screens/auth/reset_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -78,13 +79,38 @@ class _VerifyOTPState extends State<VerifyOTP> {
   }
 
   Future<void> _verifyOTP() async {
-    String enteredOTP = _controllers.map((e) => e.text).join();
-    if (enteredOTP == _otp) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Xác thực thành công!')));
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('OTP không đúng!')));
+    setState(() => _isVerify = true);
+
+    try {
+      String enteredOTP = _controllers.map((e) => e.text).join();
+
+      if (enteredOTP == _otp) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Xác thực thành công!')),
+        );
+
+        // Xóa OTP khỏi SharedPreferences sau khi xác thực
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('otp');
+        await prefs.remove('otp_time');
+
+        // Chuyển sang trang đặt lại mật khẩu
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => ResetPasswordScreen(email: widget.email)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('OTP không đúng!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi xác thực OTP: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isVerify = false);
     }
   }
 
