@@ -139,20 +139,45 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
 
     try {
-      String? error = await _userRepo.updatePassword(newPassword);
-
-      if (error == null) {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Đổi mật khẩu thành công!")),
+          const SnackBar(content: Text("Không tìm thấy tài khoản")),
         );
-        _oldPasswordController.clear();
-        _newPasswordController.clear();
-        _confirmNewPasswordController.clear();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
+        setState(() => _isChangingPassword = false);
+        return;
       }
+
+      AuthCredential credential = EmailAuthProvider.credential(
+        email: user.email!,
+        password: oldPassword,
+      );
+
+      await user.reauthenticateWithCredential(credential);
+
+      await user.updatePassword(newPassword);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Đổi mật khẩu thành công!")),
+      );
+
+      _oldPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmNewPasswordController.clear();
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "Lỗi không xác định";
+
+      if (e.code == "wrong-password" || e.code == "invalid-credential") {
+        errorMessage = "Mật khẩu cũ không đúng";
+      } else if (e.code == "weak-password") {
+        errorMessage = "Mật khẩu mới quá yếu";
+      } else if (e.code == "requires-recent-login") {
+        errorMessage = "Vui lòng đăng nhập lại trước khi đổi mật khẩu";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Lỗi: ${e.toString()}")),

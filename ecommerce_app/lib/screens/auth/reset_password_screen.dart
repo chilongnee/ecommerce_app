@@ -1,5 +1,7 @@
 import 'package:ecommerce_app/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
@@ -25,16 +27,34 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isResetting = true);
 
     try {
-      await Future.delayed(const Duration(seconds: 2));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mật khẩu đã được cập nhật!")),
+      final response = await http.post(
+        Uri.parse(
+            "http://127.0.0.1:5001/ecommerce-app-e7dea/us-central1/resetPassword"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": widget.email,
+          "newPassword": _newPasswordController.text.trim(),
+        }),
       );
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => Login()),
-      );
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Mật khẩu đã được cập nhật!")),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Login()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  responseData['message'] ?? "Đặt lại mật khẩu thất bại!")),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Lỗi: ${e.toString()}")),

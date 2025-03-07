@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:ecommerce_app/screens/auth/reset_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +19,7 @@ class _VerifyOTPState extends State<VerifyOTP> {
   List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isVerify = false;
   bool _canResend = false;
+  bool _isResend = false;
   late String _otp;
   late int _otpTime;
   int _remainTime = 60;
@@ -31,17 +34,17 @@ class _VerifyOTPState extends State<VerifyOTP> {
   Future<void> _loadOTP() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _otp = prefs.getString('otp') ?? '';
       _otpTime = prefs.getInt('otp_time') ?? 0;
     });
 
-    if (_otp.isEmpty) {
-      print("Không tìm thấy OTP trong SharedPreferences");
-    } else {
-      print("OTP hiện tại: $_otp");
-    }
-
+    if (_otpTime == 0) {
+    setState(() {
+      _canResend = true;
+      _remainTime = 0;
+    });
+  } else {
     _startCountdown();
+  }
   }
 
   void _startCountdown() {
@@ -72,7 +75,9 @@ class _VerifyOTPState extends State<VerifyOTP> {
             _canResend = true;
             print("Có thể gửi lại OTP");
           });
-          _timer?.cancel();
+          if (_timer.isActive) {
+            _timer.cancel();
+          }
         }
       });
     }
@@ -84,25 +89,32 @@ class _VerifyOTPState extends State<VerifyOTP> {
     try {
       String enteredOTP = _controllers.map((e) => e.text).join();
 
-      if (enteredOTP == _otp) {
+      final response = await http.post(
+        Uri.parse(
+            "http://127.0.0.1:5001/ecommerce-app-e7dea/us-central1/verifyOtp"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": widget.email,
+          "otp": enteredOTP,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && responseData['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Xác thực thành công!')),
         );
 
-        // Xóa OTP khỏi SharedPreferences sau khi xác thực
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('otp');
-        await prefs.remove('otp_time');
-
-        // Chuyển sang trang đặt lại mật khẩu
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-              builder: (context) => ResetPasswordScreen(email: widget.email)),
+            builder: (context) => ResetPasswordScreen(email: widget.email),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('OTP không đúng!')),
+          SnackBar(content: Text(responseData['message'] ?? 'OTP không đúng!')),
         );
       }
     } catch (e) {
@@ -115,30 +127,43 @@ class _VerifyOTPState extends State<VerifyOTP> {
   }
 
   Future<void> _resendOTP() async {
-    if (_canResend) {
-      setState(() {
-        _canResend = false;
-        _remainTime = 60;
-      });
+    setState(() => _isResend = true);
 
-      final prefs = await SharedPreferences.getInstance();
+    try {
+      final response = await http.post(
+        Uri.parse(
+            "http://127.0.0.1:5001/ecommerce-app-e7dea/us-central1/sendOtpEmail"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": widget.email}),
+      );
 
-      String newOtp =
-          (100000 + (999999 - 100000) * (new DateTime.now().millisecond / 1000))
-              .toInt()
-              .toString();
+      final responseData = jsonDecode(response.body);
 
-      await prefs.setString('otp', newOtp);
-      await prefs.setInt('otp_time', DateTime.now().millisecondsSinceEpoch);
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('otp_time', DateTime.now().millisecondsSinceEpoch);
 
-      setState(() {
-        _otp = newOtp;
-      });
+        setState(() {
+          _canResend = false;
+          _remainTime = 60;
+        });
 
-      _startCountdown();
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('OTP mới đã được gửi!')));
+        _startCountdown();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('OTP đã gửi lại!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(responseData['message'] ?? 'Không thể gửi OTP!')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi gửi lại OTP: ${e.toString()}')),
+      );
+    } finally {
+      setState(() => _isResend = false);
     }
   }
 

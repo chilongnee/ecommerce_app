@@ -43,23 +43,22 @@ class _LoginState extends State<ForgotPassword> {
         setState(() => _isSigning = false);
 
         if (response.statusCode == 200 && responseData['success'] == true) {
-          String otp = responseData['otp'];
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(responseData['message'] ??
+                    'OTP đã được gửi tới email của bạn!')),
+          );
 
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('otp', otp);
+          await prefs.setString('otp', responseData['otp'] ?? '');
           await prefs.setInt('otp_time', DateTime.now().millisecondsSinceEpoch);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('OTP đã được gửi tới email của bạn!')),
-          );
 
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => VerifyOTP(email: email)),
           );
         } else {
-          String errorMessage = responseData['message'] ?? 'Gửi OTP thất bại';
-          _showErrorMessage(errorMessage);
+          _showErrorMessage(responseData['message'] ?? 'Gửi OTP thất bại');
         }
       } catch (e) {
         setState(() => _isSigning = false);
