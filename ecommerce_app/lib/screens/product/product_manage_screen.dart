@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:ecommerce_app/repository/product_repository.dart';
 import 'package:ecommerce_app/screens/product/add_product_screen.dart';
 import 'package:ecommerce_app/screens/product/edit_product_screen.dart';
@@ -371,12 +371,17 @@ class _ProductManagementScreenState extends State<ProductManagementScreen> {
           size: 80, color: Colors.grey);
     }
 
-    if (imagePath.startsWith('/')) {
-      return Image.file(File(imagePath),
-          width: 80, height: 80, fit: BoxFit.cover);
-    } else {
-      return Image.network(imagePath, width: 80, height: 80, fit: BoxFit.cover);
-    }
+    if (kIsWeb) {
+    return const Icon(Icons.image_not_supported, size: 80, color: Colors.grey);
+  }
+
+    File imageFile = File(imagePath);
+
+    if (!imageFile.existsSync()) {
+    return const Icon(Icons.broken_image, size: 80, color: Colors.red);
+  }
+
+  return Image.file(imageFile, width: 80, height: 80, fit: BoxFit.cover);
   }
 
   String formatCurrency(double price) {

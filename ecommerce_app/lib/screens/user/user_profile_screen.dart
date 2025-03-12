@@ -130,6 +130,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       return;
     }
 
+    if (newPassword == oldPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text("Mật khẩu mới không được trùng với mật khẩu cũ")),
+      );
+      setState(() => _isChangingPassword = false);
+      return;
+    }
+
     if (newPassword != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Mật khẩu mới không khớp")),
